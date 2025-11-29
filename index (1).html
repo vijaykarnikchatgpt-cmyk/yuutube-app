@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>YuvaTech — YouTube Title Exploder (Replit-ready)</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--accent:#06b6d4;--muted:#97a0b3}
+    body{font-family:Inter,system-ui,Segoe UI,Segoe,Arial;background:linear-gradient(180deg,#071029, #071021);color:#e6eef6;margin:0;padding:18px}
+    .wrap{max-width:980px;margin:0 auto}
+    header{display:flex;gap:12px;align-items:center}
+    h1{margin:0;font-size:20px}
+    p.lead{margin:6px 0 20px;color:var(--muted)}
+    .card{background:var(--card);padding:14px;border-radius:12px;margin-bottom:12px;box-shadow:0 6px 18px rgba(2,6,23,.6)}
+    input[type=text],textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:#071226;color:inherit}
+    .row{display:flex;gap:12px}
+    .col{flex:1}
+    button{background:var(--accent);border:none;padding:10px 12px;border-radius:8px;color:#021;cursor:pointer}
+    .list{display:flex;flex-wrap:wrap;gap:8px}
+    .chip{background:#071a24;padding:8px 10px;border-radius:8px;cursor:pointer;border:1px solid rgba(255,255,255,.02)}
+    .selected{outline:3px solid rgba(6,182,212,.18)}
+    pre{background:#03101a;padding:10px;border-radius:8px;overflow:auto}
+    .small{font-size:13px;color:var(--muted)}
+    .right{display:flex;gap:8px;align-items:center}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+    .actions{display:flex;gap:8px}
+    .file-preview{max-width:120px;border-radius:8px}
+    footer{margin-top:12px;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>YuvaTech — YouTube Title Exploder</h1>
+        <p class="lead">Replit-ready single-file app. Enter a rough title — get 20 viral titles, scripts, thumbnails, shorts, hooks & export.</p>
+      </div>
+      <div class="right">
+        <div class="small">Made for: <strong>Vijay / YuvaTech</strong></div>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="topbar">
+        <div><strong>Step 1 — Enter idea</strong></div>
+        <div class="small">Quick, noisy, controversial — that works best</div>
+      </div>
+      <input id="titleInput" type="text" placeholder="Example: '3 tricks to speed up Windows'" />
+      <div style="height:8px"></div>
+      <div class="row">
+        <div class="col"><button id="explodeBtn">Explode into 20 titles</button></div>
+        <div class="col"><button id="randomBtn">Surprise me</button></div>
+      </div>
+    </div>
+
+    <div id="titlesCard" class="card" style="display:none">
+      <strong>Step 2 — Choose one title</strong>
+      <div class="small">Click a card to select. Selected card will generate scripts & thumbnails.</div>
+      <div id="titlesList" class="list" style="margin-top:12px"></div>
+    </div>
+
+    <div id="outputs" style="display:none">
+      <div class="card">
+        <div class="topbar"><div><strong>Generated — Script (1–2 min)</strong></div><div class="small">Tone: witty, sarcastic, Hinglish, roasty mentor</div></div>
+        <pre id="scriptOut"></pre>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="makeShortBtn">Make Shorts/Reels</button>
+          <button id="hooksBtn">Generate Hooks</button>
+          <button id="thumbPackBtn">Thumbnail Pack</button>
+          <button id="descBtn">Description & Tags</button>
+        </div>
+      </div>
+
+      <div id="thumbnailCard" class="card" style="display:none">
+        <strong>Thumbnail Generator</strong>
+        <div class="small">Upload your face — app will craft image prompts & text ideas.</div>
+        <input id="faceUpload" type="file" accept="image/*" />
+        <div id="facePreviewWrap" style="margin-top:8px"></div>
+        <div style="height:8px"></div>
+        <div id="thumbTextOptions" style="display:flex;flex-direction:column;gap:6px"></div>
+        <pre id="thumbPrompt" style="margin-top:8px"></pre>
+      </div>
+
+      <div id="shortsCard" class="card" style="display:none">
+        <strong>Shorts / Reels</strong>
+        <pre id="shortsOut"></pre>
+      </div>
+
+      <div id="hooksCard" class="card" style="display:none">
+        <strong>Hooks</strong>
+        <div id="hooksList" class="list"></div>
+      </div>
+
+      <div id="descCard" class="card" style="display:none">
+        <strong>Description & Tags</strong>
+        <pre id="descOut"></pre>
+      </div>
+
+      <div class="card">
+        <strong>Export</strong>
+        <div class="small">Download single TXT or ZIP of everything.</div>
+        <div style="height:6px"></div>
+        <div class="row">
+          <div class="col"><button id="downloadTxt">Download TXT</button></div>
+          <div class="col"><button id="downloadZip">Download ZIP</button></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>Tip: On Replit create a new <em>"HTML, CSS, JS"</em> repl, replace the default <code>index.html</code> with this file and press <strong>Run</strong>. No API keys needed. Upload face pic for thumbnail prompts.Prepared by <strong>YuvaTech</strong>. </footer>
+  </div>
+
+  <!-- CDN libs for zipping -> works on Replit -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+  <script>
+    // ---------- Utility generators (no external AI) ----------
+    const titleTemplates = [
+      "Don't do THIS if you want faster {topic}",
+      "{topic}: 3 tricks they won't tell you",
+      "I fixed {topic} in 60 seconds — here's how",
+      "Why your {topic} is actually dying",
+      "The secret hack for {topic} nobody uses",
+      "Stop wasting time on {topic} — do this instead",
+      "What IT support won't tell you about {topic}",
+      "Top 5 myths about {topic} — busted",
+      "This tiny setting speeds up {topic} by 200%",
+      "You're doing {topic} wrong — change this",
+      "From 0 to hero: {topic} edition",
+      "How I fixed a client's {topic} nightmare",
+      "3 tools that make {topic} painless",
+      "The brutal truth about {topic}",
+      "Emergency fix for {topic} (no tech skills)",
+      "How to survive when {topic} breaks",
+      "Insane hack: {topic} on a budget",
+      "Nobody warned me about this in {topic}",
+      "The lazy person's guide to {topic}",
+      "One change that saved my {topic} life"
+    ];
+
+    const hookTemplates = [
+      "Stop! Yeh ek minute mein solve ho sakta hai.",
+      "Agar tu bhi yeh karta hai, toh sun le — big problem.",
+      "3 seconds me bataunga, dhyaan se.",
+      "Boss ne kaha 'fix it now' — yeh trick kaam aa gayi.",
+      "Tumhara PC tumse jhel raha hai. Here's why.",
+      "User ne bola 'urgent' — and I laughed.",
+      "Ye 1 setting sab badal degi.",
+      "Don't touch that button — unless you want disaster.",
+      "Shortcut jo senior bhi nahi janta.",
+      "This cost me 3 hours — don't repeat my mistake."
+    ];
+
+    const sfxList = [
+      {name:'Impact_Boom',when:'Key reveal / punchline'},
+      {name:'Whoosh_Short',when:'Transition / cut'},
+      {name:'Glitch_Hit',when:'Mistake reveal'},
+      {name:'Pop_Ping',when:'On-screen text appear'},
+      {name:'Bass_Hit',when:'Hook drop'},
+      {name:'Suspense_Grow',when:'Before the fix'},
+      {name:'Typewriter',when:'Showing steps'},
+      {name:'Error_Alert',when:'When something fails'},
+      {name:'Crowd_Laugh',when:'Hilarious user moment'},
+      {name:'Cinematic_Boom',when:'Final CTA'}
+    ];
+
+    const hashtagPool = ['#ITSupport','#WindowsTips','#YuvaTech','#TechBro','#DesktopSupport','#Shorts','#Reels','#HowTo','#LifeHack','#TechTips'];
+
+    // ---------- DOM ----------
+    const titleInput = document.getElementById('titleInput');
+    const explodeBtn = document.getElementById('explodeBtn');
+    const randomBtn = document.getElementById('randomBtn');
+    const titlesCard = document.getElementById('titlesCard');
+    const titlesList = document.getElementById('titlesList');
+    const outputs = document.getElementById('outputs');
+    const scriptOut = document.getElementById('scriptOut');
+    const makeShortBtn = document.getElementById('makeShortBtn');
+    const hooksBtn = document.getElementById('hooksBtn');
+    const thumbPackBtn = document.getElementById('thumbPackBtn');
+    const descBtn = document.getElementById('descBtn');
+    const thumbnailCard = document.getElementById('thumbnailCard');
+    const faceUpload = document.getElementById('faceUpload');
+    const facePreviewWrap = document.getElementById('facePreviewWrap');
+    const thumbTextOptions = document.getElementById('thumbTextOptions');
+    const thumbPrompt = document.getElementById('thumbPrompt');
+    const shortsCard = document.getElementById('shortsCard');
+    const shortsOut = document.getElementById('shortsOut');
+    const hooksCard = document.getElementById('hooksCard');
+    const hooksList = document.getElementById('hooksList');
+    const descCard = document.getElementById('descCard');
+    const descOut = document.getElementById('descOut');
+    const downloadTxt = document.getElementById('downloadTxt');
+    const downloadZip = document.getElementById('downloadZip');
+
+    let current = {titleIdea:'',selectedTitle:'',script:'',thumbTexts:[],thumbPrompt:'',shorts:'',hooks:[],desc:''};
+
+    function slugify(s){return s.replace(/[^a-z0-9]+/gi,'-').toLowerCase();}
+
+    function generateTitles(seed){
+      const topic = seed.trim() || 'this';
+      const out = [];
+      const used = new Set();
+      for(let t of titleTemplates){
+        const title = t.replace('{topic}',topic);
+        if(!used.has(title)){
+          used.add(title);
+          out.push(title);
+        }
+        if(out.length>=20) break;
+      }
+      // if still less, add variations
+      while(out.length<20){
+        out.push(`No. ${out.length+1} — ${topic} ka secret revealed`);
+      }
+      return out;
+    }
+
+    function generateScript(title){
+      const hook = pick(hookTemplates);
+      const points = [
+        'Step 1 — quick diagnosis (fast, non-tech way)',
+        'Step 2 — the one setting you must change',
+        'Step 3 — a free tool / builtin fix',
+      ];
+      const roast = `Bhai, agar tu abhi bhi ${title.split(' ')[0]} jaisa karta hai, toh samajh le problem teri aadaton me hai.`;
+      const outro = 'Agar yeh accha laga toh subscribe kar, Instagram follow kar, aur WhatsApp group join kar — link description me.';
+      return `${hook}\n\nTitle: ${title}\n\nIntro:\n- ${hook} (3 sec)\n\nMain:\n- ${points.join('\n- ')}\n\nRoast Moment:\n- ${roast}\n\nExample Story:\n- Ek client tha, usne sab settings galt kar rakhi thi... (short)\n\nOutro:\n- ${outro}\n`;
+    }
+
+    function generateThumbPack(title,faceName){
+      const texts = [
+        'BRO WHY?!','FIX IN 60s','DON\'T DO THIS','SPEED BOOST','SECRET HACK','MUST SEE','URGENT FIX','SLOW NO MORE','STOP DOING THIS','GAME CHANGER','DO THIS NOW','SAVED ME','NOOB ALERT','HACKED','PRO TIP'
+      ];
+      const chosen15 = texts.slice(0,15);
+      const prompt = `Use the uploaded face (${faceName||'user_face.jpg'}) with dramatic lighting, high contrast, expression: shocked/angry. Big bold text (max 3 words) on left. Emphasize eyes and outline. Aspect ratio 16:9. Background: blurred PC desk. Keep it clickable and clean.`;
+      return {texts:chosen15,prompt};
+    }
+
+    function generateShorts(title){
+      const short15 = `Hook: ${pick(hookTemplates)}\nQuickFix: Do this 1 change.\nPunch: Roast line.\nCTA: Follow & join group.`;
+      const short7 = `Hook: ${pick(hookTemplates)}\nFix: 1 step.\nCTA.`;
+      return {short15,short7};
+    }
+
+    function generateHooks(title){
+      const out = [];
+      for(let i=0;i<20;i++) out.push(pick(hookTemplates));
+      return out;
+    }
+
+    function generateDescAndTags(title){
+      const first = `In this video — ${title}. Simple, quick, and thoda roasty tech help from YuvaTech.`;
+      const timestamps = ['00:00 Hook','00:10 Problem','00:30 Fix 1','01:00 Fix 2','01:30 Outro'];
+      const tags = shuffle(hashtagPool).slice(0,8).join(' ');
+      return `${first}\n\nTimestamps:\n${timestamps.join('\n')}\n\n${tags}`;
+    }
+
+    function pick(arr){return arr[Math.floor(Math.random()*arr.length)];}
+    function shuffle(a){return a.sort(()=>Math.random()-0.5);}
+
+    // ---------- UI actions ----------
+    explodeBtn.addEventListener('click',()=>{
+      const idea = titleInput.value.trim();
+      current.titleIdea = idea;
+      const titles = generateTitles(idea || 'your topic');
+      titlesList.innerHTML='';
+      titles.forEach((t,idx)=>{
+        const el = document.createElement('div'); el.className='chip'; el.innerText=t;
+        el.addEventListener('click',()=>selectTitle(t,el));
+        titlesList.appendChild(el);
+      });
+      titlesCard.style.display='block';
+      outputs.style.display='none';
+    });
+
+    randomBtn.addEventListener('click',()=>{
+      const samples=['Speed up Windows','Fix slow WiFi','Laptop battery hacks','Excel shortcuts that save jobs','Beat evergreen meeting chaos'];
+      titleInput.value = pick(samples);
+      explodeBtn.click();
+    });
+
+    function selectTitle(t,el){
+      // highlight
+      Array.from(titlesList.children).forEach(c=>c.classList.remove('selected'));
+      el.classList.add('selected');
+      current.selectedTitle = t;
+      // generate outputs
+      current.script = generateScript(t);
+      scriptOut.innerText = current.script;
+      outputs.style.display='block';
+      // reset detail boxes
+      thumbnailCard.style.display='none'; shortsCard.style.display='none'; hooksCard.style.display='none'; descCard.style.display='none';
+    }
+
+    makeShortBtn.addEventListener('click',()=>{
+      const s = generateShorts(current.selectedTitle);
+      shortsOut.innerText = `15-sec:\n${s.short15}\n\n7-sec:\n${s.short7}`;
+      shortsCard.style.display='block';
+    });
+
+    hooksBtn.addEventListener('click',()=>{
+      const h = generateHooks(current.selectedTitle);
+      hooksList.innerHTML='';
+      h.forEach(hk=>{const el=document.createElement('div');el.className='chip';el.innerText=hk;hooksList.appendChild(el)});
+      hooksCard.style.display='block';
+    });
+
+    thumbPackBtn.addEventListener('click',()=>{
+      thumbnailCard.style.display='block';
+      // if user already uploaded, regenerate preview
+      if(faceUpload.files.length) showFacePreview(faceUpload.files[0]);
+      const pack = generateThumbPack(current.selectedTitle, (faceUpload.files[0]?faceUpload.files[0].name:'user_face.jpg'));
+      thumbTextOptions.innerHTML='';
+      pack.texts.forEach(t=>{const d=document.createElement('div');d.className='small';d.innerText='• '+t;thumbTextOptions.appendChild(d)});
+      thumbPrompt.innerText = pack.prompt;
+      current.thumbTexts = pack.texts; current.thumbPrompt = pack.prompt;
+    });
+
+    descBtn.addEventListener('click',()=>{
+      const d = generateDescAndTags(current.selectedTitle);
+      descOut.innerText = d;
+      descCard.style.display='block';
+    });
+
+    faceUpload.addEventListener('change',()=>{
+      const f = faceUpload.files[0];
+      showFacePreview(f);
+      // regenerate prompt using filename
+      const pack = generateThumbPack(current.selectedTitle, f.name);
+      thumbPrompt.innerText = pack.prompt;
+      current.thumbPrompt = pack.prompt;
+    });
+
+    function showFacePreview(file){
+      facePreviewWrap.innerHTML = '';
+      const img = document.createElement('img');
+      img.className='file-preview';
+      img.src = URL.createObjectURL(file);
+      facePreviewWrap.appendChild(img);
+    }
+
+    // ---------- Export ----------
+    downloadTxt.addEventListener('click',()=>{
+      const content = buildFullText();
+      const blob = new Blob([content],{type:'text/plain;charset=utf-8'});
+      saveAs(blob, slugify(current.selectedTitle || 'yuva')+'.txt');
+    });
+
+    downloadZip.addEventListener('click',async()=>{
+      const zip = new JSZip();
+      zip.file(slugify(current.selectedTitle||'yuva')+'/script.txt', current.script||'');
+      zip.file(slugify(current.selectedTitle||'yuva')+'/thumbnail-prompt.txt', current.thumbPrompt||'');
+      zip.file(slugify(current.selectedTitle||'yuva')+'/thumb-texts.txt', (current.thumbTexts||[]).join('\n'));
+      zip.file(slugify(current.selectedTitle||'yuva')+'/shorts.txt', shortsOut.innerText||'');
+      zip.file(slugify(current.selectedTitle||'yuva')+'/hooks.txt', (current.hooks||[]).join('\n')||hooksList.innerText);
+      zip.file(slugify(current.selectedTitle||'yuva')+'/description.txt', descOut.innerText||'');
+      // include face image if uploaded
+      if(faceUpload.files.length){
+        const f = faceUpload.files[0];
+        const arrayBuffer = await f.arrayBuffer();
+        zip.file(slugify(current.selectedTitle||'yuva')+'/'+f.name, arrayBuffer);
+      }
+      const blob = await zip.generateAsync({type:'blob'});
+      saveAs(blob, slugify(current.selectedTitle||'yuva')+'.zip');
+    });
+
+    function buildFullText(){
+      return `Title idea: ${current.titleIdea}\nSelected title: ${current.selectedTitle}\n\nSCRIPT:\n${current.script}\n\nTHUMBNAIL PROMPT:\n${current.thumbPrompt}\n\nTHUMB TEXTS:\n${(current.thumbTexts||[]).join('\n')}\n\nSHORTS:\n${shortsOut.innerText}\n\nHOOKS:\n${hooksList.innerText}\n\nDESCRIPTION:\n${descOut.innerText}`;
+    }
+
+    // initial demo seed
+    titleInput.value = '3 Things Every IT Support Fresher Must Learn';
+  </script>
+</body>
+</html>
